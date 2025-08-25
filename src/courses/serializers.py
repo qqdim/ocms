@@ -1,19 +1,29 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
-
 from .models import Course, Grade, GradeComment, HomeworkAssignment, Lecture, Submission
+from .services import (
+    CourseService,
+    LectureService,
+    HomeworkService,
+    SubmissionService,
+    GradingService,
+)
 
 User = get_user_model()
 
 
 class UserMiniSerializer(serializers.ModelSerializer):
+    """Serializer for minimal user details."""
+
     class Meta:
+        """Meta information for UserMiniSerializer."""
         model = User
         fields = ("id", "username", "role")
         read_only_fields = ["created_by"]
 
 
 class CourseSerializer(serializers.ModelSerializer):
+    """Serializer for course details."""
     teachers = UserMiniSerializer(many=True, read_only=True)
     students = UserMiniSerializer(many=True, read_only=True)
     created_by = UserMiniSerializer(read_only=True)
@@ -31,13 +41,18 @@ class CourseSerializer(serializers.ModelSerializer):
         )
 
     def create(self, validated_data):
+        """Create course using service layer."""
+
         user = self.context["request"].user
-        course = Course.objects.create(created_by=user, **validated_data)
-        course.teachers.add(user)
-        return course
+        return CourseService.create_course(
+            title=validated_data["title"],
+            description=validated_data.get("description", ""),
+            created_by=user
+        )
 
 
 class LectureSerializer(serializers.ModelSerializer):
+    """Serializer for lecture details."""
     course_id = serializers.PrimaryKeyRelatedField(queryset=Course.objects.all(), source="course", write_only=True)
     created_by = UserMiniSerializer(read_only=True)
 
@@ -54,11 +69,24 @@ class LectureSerializer(serializers.ModelSerializer):
         read_only_fields = ("created_by", "created_at")
 
     def create(self, validated_data):
-        validated_data["created_by"] = self.context["request"].user
-        return super().create(validated_data)
+        """Create lecture using service layer."""
+
+        user = self.context["request"].user
+        return LectureService.create_lecture(
+            topic=validated_data["topic"],
+            course=validated_data["course"],
+            created_by=user,
+            presentation=validated_data.get("presentation")
+        )
+
+    def update(self, instance, validated_data):
+        """Update lecture using service layer."""
+
+        return LectureService.update_lecture(instance, **validated_data)
 
 
 class HomeworkAssignmentSerializer(serializers.ModelSerializer):
+    """Serializer for homework assignment details."""
     lecture_id = serializers.PrimaryKeyRelatedField(queryset=Lecture.objects.all(), source="lecture", write_only=True)
     created_by = UserMiniSerializer(read_only=True)
 
@@ -67,11 +95,24 @@ class HomeworkAssignmentSerializer(serializers.ModelSerializer):
         fields = ("id", "lecture_id", "text", "due_date", "created_by", "created_at")
 
     def create(self, validated_data):
-        validated_data["created_by"] = self.context["request"].user
-        return super().create(validated_data)
+        """Create homework assignment using service layer."""
+
+        user = self.context["request"].user
+        return HomeworkService.create_homework_assignment(
+            text=validated_data["text"],
+            lecture=validated_data["lecture"],
+            created_by=user,
+            due_date=validated_data.get("due_date")
+        )
+
+    def update(self, instance, validated_data):
+        """Update homework assignment using service layer."""
+
+        return HomeworkService.update_homework_assignment(instance, **validated_data)
 
 
 class SubmissionSerializer(serializers.ModelSerializer):
+    """Serializer for submission details."""
     assignment_id = serializers.PrimaryKeyRelatedField(
         queryset=HomeworkAssignment.objects.all(), source="assignment", write_only=True
     )
@@ -89,20 +130,26 @@ class SubmissionSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ("student", "submitted_at")
 
-    def validate(self, attrs):
-        request = self.context["request"]
-        assignment = attrs["assignment"]
-        course = assignment.lecture.course
-        if not course.students.filter(id=request.user.id).exists():
-            raise serializers.ValidationError("You are not enrolled in this course.")
-        return attrs
-
     def create(self, validated_data):
-        validated_data["student"] = self.context["request"].user
-        return super().create(validated_data)
+        """Create submission using service layer."""
+
+        user = self.context["request"].user
+        return SubmissionService.create_submission(
+            assignment=validated_data["assignment"],
+            student=user,
+            text=validated_data.get("text", ""),
+            attachment=validated_data.get("attachment")
+        )
+
+    def update(self, instance, validated_data):
+        """Update submission using service layer."""
+
+        user = self.context["request"].user
+        return SubmissionService.update_submission(instance, user, **validated_data)
 
 
 class GradeSerializer(serializers.ModelSerializer):
+    """Serializer for grade details."""
     submission_id = serializers.PrimaryKeyRelatedField(
         queryset=Submission.objects.all(), source="submission", write_only=True
     )
@@ -112,20 +159,26 @@ class GradeSerializer(serializers.ModelSerializer):
         model = Grade
         fields = ("id", "submission_id", "score", "comment", "graded_by", "graded_at")
 
-    def validate(self, attrs):
-        request = self.context["request"]
-        submission = attrs["submission"]
-        course = submission.assignment.lecture.course
-        if not course.teachers.filter(id=request.user.id).exists():
-            raise serializers.ValidationError("Only a course teacher can grade this submission.")
-        return attrs
-
     def create(self, validated_data):
-        validated_data["graded_by"] = self.context["request"].user
-        return super().create(validated_data)
+        """Create grade using service layer."""
+
+        user = self.context["request"].user
+        return GradingService.create_grade(
+            submission=validated_data["submission"],
+            score=validated_data["score"],
+            graded_by=user,
+            comment=validated_data.get("comment", "")
+        )
+
+    def update(self, instance, validated_data):
+        """Update grade using service layer."""
+
+        user = self.context["request"].user
+        return GradingService.update_grade(instance, user, **validated_data)
 
 
 class GradeCommentSerializer(serializers.ModelSerializer):
+    """Serializer for grade comment details."""
     author = UserMiniSerializer(read_only=True)
 
     class Meta:
@@ -133,16 +186,12 @@ class GradeCommentSerializer(serializers.ModelSerializer):
         fields = ("id", "grade", "author", "text", "created_at")
         read_only_fields = ("author", "created_at")
 
-    def validate(self, attrs):
-        user = self.context["request"].user
-        grade = attrs["grade"]
-        course = grade.submission.assignment.lecture.course
-        is_teacher = course.teachers.filter(id=user.id).exists()
-        is_student_owner = grade.submission.student_id == user.id
-        if not (is_teacher or is_student_owner):
-            raise serializers.ValidationError("Only course teachers or the submission owner can comment.")
-        return attrs
-
     def create(self, validated_data):
-        validated_data["author"] = self.context["request"].user
-        return super().create(validated_data)
+        """Create grade comment using service layer."""
+        
+        user = self.context["request"].user
+        return GradingService.create_grade_comment(
+            grade=validated_data["grade"],
+            author=user,
+            text=validated_data["text"]
+        )

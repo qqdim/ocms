@@ -1,5 +1,3 @@
-from django.contrib.auth import get_user_model
-from django.db import models
 from django.shortcuts import get_object_or_404
 from rest_framework import decorators, permissions, response, status, viewsets
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -15,15 +13,31 @@ from .serializers import (
     SubmissionSerializer,
     UserMiniSerializer,
 )
-
-User = get_user_model()
+from .services import (
+    CourseService,
+    LectureService,
+    HomeworkService,
+    SubmissionService,
+    GradingService,
+)
+from .exceptions import (
+    CourseException,
+    PermissionDeniedException,
+    ValidationException,
+    UserRoleException,
+    NotEnrolledException,
+    AlreadyGradedException,
+)
 
 
 class CourseViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing courses."""
+
     queryset = Course.objects.all().order_by("-created_at")
     serializer_class = CourseSerializer
 
     def get_permissions(self):
+        """Get permissions based on the action."""
         if self.action in ["create"]:
             return [permissions.IsAuthenticated(), IsTeacher()]
         if self.action in [
@@ -37,50 +51,77 @@ class CourseViewSet(viewsets.ModelViewSet):
             return [permissions.IsAuthenticated(), IsCourseTeacher()]
         return [permissions.IsAuthenticated()]
 
+    def handle_service_exception(self, e):
+        """Convert service exceptions to appropriate HTTP responses."""
+
+        if isinstance(e, UserRoleException):
+            return response.Response({"detail": str(e)}, status=400)
+        elif isinstance(e, ValidationException):
+            return response.Response({"detail": str(e)}, status=400)
+        elif isinstance(e, PermissionDeniedException):
+            return response.Response({"detail": str(e)}, status=403)
+        else:
+            return response.Response({"detail": "An error occurred."}, status=500)
+
     @decorators.action(detail=True, methods=["get"], url_path="students")
     def list_students(self, request, pk=None):
+        """List all students in the course."""
         course = self.get_object()
-        return response.Response(UserMiniSerializer(course.students.all(), many=True).data)
+        students = CourseService.get_course_students(course)
+        return response.Response(UserMiniSerializer(students, many=True).data)
 
     @decorators.action(detail=True, methods=["post"], url_path="students")
     def add_student(self, request, pk=None):
+        """Add a student to the course."""
         course = self.get_object()
         student_id = request.data.get("student_id")
-        student = get_object_or_404(User, id=student_id)
-        if not student.is_student():
-            return response.Response({"detail": "User is not a student."}, status=400)
-        course.students.add(student)
-        return response.Response({"detail": "Student added."})
+        
+        try:
+            CourseService.add_student_to_course(course, student_id)
+            return response.Response({"detail": "Student added."})
+        except CourseException as e:
+            return self.handle_service_exception(e)
 
     @decorators.action(detail=True, methods=["delete"], url_path="students/(?P<student_id>[^/.]+)")
     def remove_student(self, request, pk=None, student_id=None):
+        """Remove a student from the course."""
         course = self.get_object()
-        student = get_object_or_404(User, id=student_id)
-        course.students.remove(student)
-        return response.Response(status=status.HTTP_204_NO_CONTENT)
+        
+        try:
+            CourseService.remove_student_from_course(course, student_id)
+            return response.Response(status=status.HTTP_204_NO_CONTENT)
+        except CourseException as e:
+            return self.handle_service_exception(e)
 
     @decorators.action(detail=True, methods=["get"], url_path="teachers")
     def list_teachers(self, request, pk=None):
+        """List all teachers in the course."""
         course = self.get_object()
-        return response.Response(UserMiniSerializer(course.teachers.all(), many=True).data)
+        teachers = CourseService.get_course_teachers(course)
+        return response.Response(UserMiniSerializer(teachers, many=True).data)
 
     @decorators.action(detail=True, methods=["post"], url_path="teachers")
     def add_teacher(self, request, pk=None):
+        """Add a teacher to the course."""
         course = self.get_object()
         teacher_id = request.data.get("teacher_id")
-        teacher = get_object_or_404(User, id=teacher_id)
-        if not teacher.is_teacher():
-            return response.Response({"detail": "User is not a teacher."}, status=400)
-        course.teachers.add(teacher)
-        return response.Response({"detail": "Teacher added."})
+        
+        try:
+            CourseService.add_teacher_to_course(course, teacher_id)
+            return response.Response({"detail": "Teacher added."})
+        except CourseException as e:
+            return self.handle_service_exception(e)
 
 
 class LectureViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing lectures."""
+
     queryset = Lecture.objects.select_related("course").all()
     serializer_class = LectureSerializer
     parser_classes = (MultiPartParser, FormParser)
 
     def get_permissions(self):
+        """Get permissions based on the action."""
         if self.action in ["create", "update", "partial_update", "destroy"]:
             return [permissions.IsAuthenticated(), IsCourseTeacher()]
         if self.action in ["retrieve"]:
@@ -88,21 +129,23 @@ class LectureViewSet(viewsets.ModelViewSet):
         return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        """Get queryset based on course filter."""
         course_id = self.request.query_params.get("course")
-        if course_id:
-            qs = qs.filter(course_id=course_id)
-        return qs.order_by("-created_at")
+        return LectureService.get_lectures_by_course(course_id)
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        """Save the lecture instance."""
+        serializer.save()
 
 
 class HomeworkAssignmentViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing homework assignments."""
+
     queryset = HomeworkAssignment.objects.select_related("lecture", "lecture__course").all()
     serializer_class = HomeworkAssignmentSerializer
 
     def get_permissions(self):
+        """Get permissions based on the action."""
         if self.action in ["create", "update", "partial_update", "destroy"]:
             return [permissions.IsAuthenticated(), IsCourseTeacher()]
         if self.action in ["retrieve"]:
@@ -110,88 +153,96 @@ class HomeworkAssignmentViewSet(viewsets.ModelViewSet):
         return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        """Get queryset based on lecture filter."""
         lecture_id = self.request.query_params.get("lecture")
-        if lecture_id:
-            qs = qs.filter(lecture_id=lecture_id)
-        return qs.order_by("-created_at")
+        return HomeworkService.get_assignments_by_lecture(lecture_id)
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        """Save the homework assignment instance."""
+        serializer.save()
 
 
 class SubmissionViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing submissions."""
+
     queryset = Submission.objects.select_related("assignment", "assignment__lecture__course").all()
     serializer_class = SubmissionSerializer
 
     def get_permissions(self):
+        """Get permissions for the viewset."""
         return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
-        qs = super().get_queryset()
-        user = self.request.user
+        """Get queryset based on assignment filter."""
         assignment_id = self.request.query_params.get("assignment")
-        if assignment_id:
-            qs = qs.filter(assignment_id=assignment_id)
-        if hasattr(user, "is_student") and user.is_student():
-            qs = qs.filter(student=user)
-        elif hasattr(user, "is_teacher") and user.is_teacher():
-            qs = qs.filter(assignment__lecture__course__teachers=user)
-        else:
-            qs = qs.none()
-        return qs.order_by("-submitted_at")
+        return SubmissionService.get_submissions_for_user(self.request.user, assignment_id)
 
     def perform_update(self, serializer):
-        instance = self.get_object()
-        if hasattr(instance, "grade"):
-            raise PermissionError("Submission already graded; cannot modify.")
-        if instance.student_id != self.request.user.id:
-            raise PermissionError("Cannot modify others' submissions.")
+        """Save the updated submission instance."""
         serializer.save()
+
+    def handle_service_exception(self, e):
+        """Convert service exceptions to appropriate HTTP responses."""
+
+        if isinstance(e, AlreadyGradedException):
+            return response.Response({"detail": str(e)}, status=400)
+        elif isinstance(e, PermissionDeniedException):
+            return response.Response({"detail": str(e)}, status=403)
+        else:
+            return response.Response({"detail": "An error occurred."}, status=500)
 
     @decorators.action(detail=True, methods=["get", "post", "patch"], url_path="grade")
     def grade(self, request, pk=None):
+        """Handle grading actions for a submission."""
         submission = self.get_object()
-        course = submission.assignment.lecture.course
-        if request.method.lower() in ["post", "patch"]:
-            if not course.teachers.filter(id=request.user.id).exists():
-                return response.Response({"detail": "Only course teachers can grade."}, status=403)
-        if request.method.lower() == "get":
-            if submission.student_id != request.user.id and not course.teachers.filter(id=request.user.id).exists():
-                return response.Response({"detail": "Not allowed."}, status=403)
-            if hasattr(submission, "grade"):
-                return response.Response(GradeSerializer(submission.grade).data)
-            return response.Response(status=204)
-        data = request.data.copy()
-        data["submission_id"] = submission.id
-        if hasattr(submission, "grade") and request.method.lower() == "patch":
-            ser = GradeSerializer(submission.grade, data=data, partial=True, context={"request": request})
-        elif hasattr(submission, "grade") and request.method.lower() == "post":
-            return response.Response({"detail": "Grade already exists. Use PATCH."}, status=400)
-        else:
-            ser = GradeSerializer(data=data, context={"request": request})
-        ser.is_valid(raise_exception=True)
-        grade = ser.save()
-        return response.Response(GradeSerializer(grade).data)
+        
+        try:
+            if request.method.lower() == "get":
+                if not GradingService.can_user_view_grade(submission.grade if hasattr(submission, "grade") else None, request.user):
+                    return response.Response({"detail": "Not allowed."}, status=403)
+                
+                if hasattr(submission, "grade"):
+                    return response.Response(GradeSerializer(submission.grade).data)
+                return response.Response(status=204)
+            
+            elif request.method.lower() == "post":
+                data = request.data.copy()
+                data["submission_id"] = submission.id
+                
+                serializer = GradeSerializer(data=data, context={"request": request})
+                serializer.is_valid(raise_exception=True)
+                grade = serializer.save()
+                return response.Response(GradeSerializer(grade).data)
+            
+            elif request.method.lower() == "patch":
+                if not hasattr(submission, "grade"):
+                    return response.Response({"detail": "No grade exists to update."}, status=400)
+                
+                data = request.data.copy()
+                serializer = GradeSerializer(submission.grade, data=data, partial=True, context={"request": request})
+                serializer.is_valid(raise_exception=True)
+                grade = serializer.save()
+                return response.Response(GradeSerializer(grade).data)
+                
+        except CourseException as e:
+            return self.handle_service_exception(e)
 
 
 class GradeCommentViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing grade comments."""
+
     queryset = GradeComment.objects.select_related("grade", "author", "grade__submission__assignment__lecture__course")
     serializer_class = GradeCommentSerializer
 
     def get_permissions(self):
+        """Get permissions for the viewset."""
         return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        """Get queryset based on grade filter."""
         grade_id = self.request.query_params.get("grade")
-        if grade_id:
-            qs = qs.filter(grade_id=grade_id)
-        user = self.request.user
-        return qs.filter(
-            models.Q(grade__submission__assignment__lecture__course__teachers=user)
-            | models.Q(grade__submission__student=user)
-        ).order_by("-created_at")
+        return GradingService.get_grade_comments_for_user(self.request.user, grade_id)
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+        """Save the grade comment instance."""
+        serializer.save()

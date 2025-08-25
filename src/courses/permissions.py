@@ -7,20 +7,30 @@ User = get_user_model()
 
 
 class IsTeacher(BasePermission):
+    """Permission class to check if the user is a teacher."""
+
     def has_permission(self, request, view):
+        """Check if the user is authenticated and has the teacher role."""
         return request.user.is_authenticated and getattr(request.user, "is_teacher")()
 
 
 class IsStudent(BasePermission):
+    """Permission class to check if the user is a student."""
+
     def has_permission(self, request, view):
+        """Check if the user is authenticated and has the student role."""
         return request.user.is_authenticated and getattr(request.user, "is_student")()
 
 
 class IsCourseTeacher(BasePermission):
+    """Permission class to check if the user is a teacher of the course."""
+
     def _is_teacher_of(self, user, course: Course):
+        """Check if the user is a teacher of the given course."""
         return course.teachers.filter(id=user.id).exists()
 
     def has_object_permission(self, request, view, obj):
+        """Check object-level permissions for the user."""
         user = request.user
         if isinstance(obj, Course):
             return self._is_teacher_of(user, obj)
@@ -36,7 +46,10 @@ class IsCourseTeacher(BasePermission):
 
 
 class IsCourseStudentOrTeacherReadOnly(BasePermission):
+    """Permission class to allow read-only access for students and teachers."""
+
     def has_object_permission(self, request, view, obj):
+        """Check object-level permissions for read-only access."""
         def is_teacher(course: Course):
             return course.teachers.filter(id=request.user.id).exists()
 

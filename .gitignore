@@ -27,6 +27,7 @@ htmlcov/
 *.log
 
 *.bak
+*_bak
 *_del
 
 *.egg-info
