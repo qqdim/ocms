@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Course, Lecture, HomeworkAssignment, Submission, Grade, GradeComment
+from .models import Course, Grade, GradeComment, HomeworkAssignment, Lecture, Submission
 
 admin.site.register(Course)
 admin.site.register(Lecture)

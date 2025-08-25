@@ -1,19 +1,19 @@
 from django.contrib.auth import get_user_model
-from rest_framework.permissions import BasePermission, SAFE_METHODS
+from rest_framework.permissions import SAFE_METHODS, BasePermission
 
-from .models import Course, Lecture, HomeworkAssignment, Submission, Grade
+from .models import Course, Grade, HomeworkAssignment, Lecture, Submission
 
 User = get_user_model()
 
 
 class IsTeacher(BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and getattr(request.user, 'is_teacher')()
+        return request.user.is_authenticated and getattr(request.user, "is_teacher")()
 
 
 class IsStudent(BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and getattr(request.user, 'is_student')()
+        return request.user.is_authenticated and getattr(request.user, "is_student")()
 
 
 class IsCourseTeacher(BasePermission):
@@ -45,13 +45,13 @@ class IsCourseStudentOrTeacherReadOnly(BasePermission):
 
         if isinstance(obj, Course):
             course = obj
-        elif hasattr(obj, 'course'):
+        elif hasattr(obj, "course"):
             course = obj.course
-        elif hasattr(obj, 'lecture'):
+        elif hasattr(obj, "lecture"):
             course = obj.lecture.course
-        elif hasattr(obj, 'assignment'):
+        elif hasattr(obj, "assignment"):
             course = obj.assignment.lecture.course
-        elif hasattr(obj, 'submission'):
+        elif hasattr(obj, "submission"):
             course = obj.submission.assignment.lecture.course
         else:
             return False
