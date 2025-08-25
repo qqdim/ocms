@@ -1,0 +1,35 @@
+# Виртуальное окружение
+venv/
+.venv/
+env/
+
+# Файлы, созданные Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Локальные данные Django
+db.sqlite3
+media/
+static_cdn/
+
+# Файлы окружения (с секретными ключами!)
+.env
+.env.example
+
+# Файлы, создаваемые IDE (например, VS Code)
+.vscode/
+.idea/
+
+# Файлы, создаваемые операционной системой
+.DS_Store
+Thumbs.db
+
+# Временные файлы тестов
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Логи
+*.log
