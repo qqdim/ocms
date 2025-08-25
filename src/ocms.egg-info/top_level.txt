@@ -1,0 +1,4 @@
+courses
+manage
+ocms
+users
