@@ -33,3 +33,5 @@ htmlcov/
 
 # Логи
 *.log
+
+*.bak
