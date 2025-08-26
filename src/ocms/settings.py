@@ -24,7 +24,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "users",
     "courses",
-    "auth",
+    "authentication",
 ]
 
 MIDDLEWARE = [

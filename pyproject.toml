@@ -16,6 +16,8 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "ruff",
+    "pytest-django",
+    "factory-boy",
 ]
 
 [tool.ruff]
