@@ -1,9 +1,24 @@
 from django.contrib.auth import get_user_model
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
-from .models import Course, Grade, HomeworkAssignment, Lecture, Submission
+from .models import Course, Lecture, Submission
+from .services import CourseService
 
-User = get_user_model()
+
+def _get_course_from_obj(obj) -> Course | None:
+    """Helper to extract course from various objects."""
+
+    if isinstance(obj, Course):
+        return obj
+    if hasattr(obj, "course"):
+        return obj.course
+    if hasattr(obj, "lecture"):
+        return obj.lecture.course
+    if hasattr(obj, "assignment"):
+        return obj.assignment.lecture.course
+    if hasattr(obj, "submission"):
+        return obj.submission.assignment.lecture.course
+    return None
 
 
 class IsTeacher(BasePermission):
@@ -25,49 +40,27 @@ class IsStudent(BasePermission):
 class IsCourseTeacher(BasePermission):
     """Permission class to check if the user is a teacher of the course."""
 
-    def _is_teacher_of(self, user, course: Course):
-        """Check if the user is a teacher of the given course."""
-        return course.teachers.filter(id=user.id).exists()
-
     def has_object_permission(self, request, view, obj):
-        """Check object-level permissions for the user."""
-        user = request.user
-        if isinstance(obj, Course):
-            return self._is_teacher_of(user, obj)
-        if isinstance(obj, Lecture):
-            return self._is_teacher_of(user, obj.course)
-        if isinstance(obj, HomeworkAssignment):
-            return self._is_teacher_of(user, obj.lecture.course)
-        if isinstance(obj, Submission):
-            return self._is_teacher_of(user, obj.assignment.lecture.course)
-        if isinstance(obj, Grade):
-            return self._is_teacher_of(user, obj.submission.assignment.lecture.course)
-        return False
+        """Check object-level permissions by asking the CourseService."""
+        course = _get_course_from_obj(obj)
+        if not course:
+            return False
+        return CourseService.is_user_course_teacher(course=course, user=request.user)
 
 
 class IsCourseStudentOrTeacherReadOnly(BasePermission):
     """Permission class to allow read-only access for students and teachers."""
 
     def has_object_permission(self, request, view, obj):
-        """Check object-level permissions for read-only access."""
-        def is_teacher(course: Course):
-            return course.teachers.filter(id=request.user.id).exists()
-
-        def is_student(course: Course):
-            return course.students.filter(id=request.user.id).exists()
-
-        if isinstance(obj, Course):
-            course = obj
-        elif hasattr(obj, "course"):
-            course = obj.course
-        elif hasattr(obj, "lecture"):
-            course = obj.lecture.course
-        elif hasattr(obj, "assignment"):
-            course = obj.assignment.lecture.course
-        elif hasattr(obj, "submission"):
-            course = obj.submission.assignment.lecture.course
-        else:
+        """Check object-level permissions for read-only access using CourseService."""
+        course = _get_course_from_obj(obj)
+        if not course:
             return False
+
+        is_teacher = CourseService.is_user_course_teacher(course=course, user=request.user)
+
         if request.method in SAFE_METHODS:
-            return is_teacher(course) or is_student(course)
-        return is_teacher(course)
+            is_student = CourseService.is_user_course_student(course=course, user=request.user)
+            return is_teacher or is_student
+
+        return is_teacher
