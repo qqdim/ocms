@@ -18,7 +18,7 @@ class TestLectureService:
             assert lecture.topic == "Introduction to Python"
             assert lecture.course == course
             assert lecture.created_by == teacher
-            assert lecture.presentation.name == ""  # Поле FileField по умолчанию пустое
+            assert lecture.presentation.name == ""
 
             mock_logger.info.assert_any_call(
                 f"Creating lecture 'Introduction to Python' for course {course.id} by user {teacher.id}"
@@ -37,10 +37,10 @@ class TestLectureService:
     def test_get_lectures_by_course(self):
         """Tests fetching all lectures and filtering them by course."""
         course1 = CourseFactory()
-        LectureFactory.create_batch(2, course=course1)  # Создаем 2 лекции для первого курса
+        LectureFactory.create_batch(2, course=course1) 
 
         course2 = CourseFactory()
-        lecture3 = LectureFactory(course=course2)  # Создаем 1 лекцию для второго курса
+        lecture3 = LectureFactory(course=course2)  
 
         # --- Test case 1: Get all lectures ---
         all_lectures = LectureService.get_lectures_by_course()

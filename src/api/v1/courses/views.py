@@ -205,7 +205,7 @@ class SubmissionViewSet(viewsets.ModelViewSet):
                 )
 
             serializer.is_valid(raise_exception=True)
-            grade = serializer.save(submission_id=submission.id)  # Pass submission_id
+            grade = serializer.save(submission_id=submission.id) 
             return response.Response(GradeSerializer(grade).data)
 
         except CourseException as e:
