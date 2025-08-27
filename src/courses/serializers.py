@@ -17,6 +17,7 @@ class UserMiniSerializer(serializers.ModelSerializer):
 
     class Meta:
         """Meta information for UserMiniSerializer."""
+
         model = User
         fields = ("id", "username", "role")
         read_only_fields = ["created_by"]
@@ -24,6 +25,7 @@ class UserMiniSerializer(serializers.ModelSerializer):
 
 class CourseSerializer(serializers.ModelSerializer):
     """Serializer for course details."""
+
     teachers = UserMiniSerializer(many=True, read_only=True)
     students = UserMiniSerializer(many=True, read_only=True)
     created_by = UserMiniSerializer(read_only=True)
@@ -45,14 +47,13 @@ class CourseSerializer(serializers.ModelSerializer):
 
         user = self.context["request"].user
         return CourseService.create_course(
-            title=validated_data["title"],
-            description=validated_data.get("description", ""),
-            created_by=user
+            title=validated_data["title"], description=validated_data.get("description", ""), created_by=user
         )
 
 
 class LectureSerializer(serializers.ModelSerializer):
     """Serializer for lecture details."""
+
     course_id = serializers.PrimaryKeyRelatedField(queryset=Course.objects.all(), source="course", write_only=True)
     created_by = UserMiniSerializer(read_only=True)
 
@@ -76,7 +77,7 @@ class LectureSerializer(serializers.ModelSerializer):
             topic=validated_data["topic"],
             course=validated_data["course"],
             created_by=user,
-            presentation=validated_data.get("presentation")
+            presentation=validated_data.get("presentation"),
         )
 
     def update(self, instance, validated_data):
@@ -87,6 +88,7 @@ class LectureSerializer(serializers.ModelSerializer):
 
 class HomeworkAssignmentSerializer(serializers.ModelSerializer):
     """Serializer for homework assignment details."""
+
     lecture_id = serializers.PrimaryKeyRelatedField(queryset=Lecture.objects.all(), source="lecture", write_only=True)
     created_by = UserMiniSerializer(read_only=True)
 
@@ -102,7 +104,7 @@ class HomeworkAssignmentSerializer(serializers.ModelSerializer):
             text=validated_data["text"],
             lecture=validated_data["lecture"],
             created_by=user,
-            due_date=validated_data.get("due_date")
+            due_date=validated_data.get("due_date"),
         )
 
     def update(self, instance, validated_data):
@@ -113,6 +115,7 @@ class HomeworkAssignmentSerializer(serializers.ModelSerializer):
 
 class SubmissionSerializer(serializers.ModelSerializer):
     """Serializer for submission details."""
+
     assignment_id = serializers.PrimaryKeyRelatedField(
         queryset=HomeworkAssignment.objects.all(), source="assignment", write_only=True
     )
@@ -138,7 +141,7 @@ class SubmissionSerializer(serializers.ModelSerializer):
             assignment=validated_data["assignment"],
             student=user,
             text=validated_data.get("text", ""),
-            attachment=validated_data.get("attachment")
+            attachment=validated_data.get("attachment"),
         )
 
     def update(self, instance, validated_data):
@@ -150,6 +153,7 @@ class SubmissionSerializer(serializers.ModelSerializer):
 
 class GradeSerializer(serializers.ModelSerializer):
     """Serializer for grade details."""
+
     submission_id = serializers.PrimaryKeyRelatedField(
         queryset=Submission.objects.all(), source="submission", write_only=True
     )
@@ -167,7 +171,7 @@ class GradeSerializer(serializers.ModelSerializer):
             submission=validated_data["submission"],
             score=validated_data["score"],
             graded_by=user,
-            comment=validated_data.get("comment", "")
+            comment=validated_data.get("comment", ""),
         )
 
     def update(self, instance, validated_data):
@@ -179,6 +183,7 @@ class GradeSerializer(serializers.ModelSerializer):
 
 class GradeCommentSerializer(serializers.ModelSerializer):
     """Serializer for grade comment details."""
+
     author = UserMiniSerializer(read_only=True)
 
     class Meta:
@@ -188,10 +193,8 @@ class GradeCommentSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """Create grade comment using service layer."""
-        
+
         user = self.context["request"].user
         return GradingService.create_grade_comment(
-            grade=validated_data["grade"],
-            author=user,
-            text=validated_data["text"]
+            grade=validated_data["grade"], author=user, text=validated_data["text"]
         )

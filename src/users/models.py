@@ -8,6 +8,7 @@ class User(AbstractUser):
 
     class Roles(models.TextChoices):
         """Enumeration for user roles."""
+
         TEACHER = "TEACHER", "Teacher"
         STUDENT = "STUDENT", "Student"
 

@@ -9,19 +9,14 @@ logger = logging.getLogger(__name__)
 
 class LectureService:
     """Service class for lecture-related operations."""
-    
+
     @staticmethod
     def create_lecture(topic: str, course: Course, created_by, presentation=None) -> Lecture:
         """Create a new lecture."""
 
         logger.info(f"Creating lecture '{topic}' for course {course.id} by user {created_by.id}")
-        lecture = Lecture.objects.create(
-            topic=topic,
-            course=course,
-            created_by=created_by,
-            presentation=presentation
-        )
-        
+        lecture = Lecture.objects.create(topic=topic, course=course, created_by=created_by, presentation=presentation)
+
         logger.info(f"Lecture {lecture.id} created successfully")
         return lecture
 
@@ -32,7 +27,7 @@ class LectureService:
         logger.info(f"Updating lecture {lecture.id}")
         for field, value in validated_data.items():
             setattr(lecture, field, value)
-        
+
         lecture.save()
         logger.info(f"Lecture {lecture.id} updated successfully")
         return lecture

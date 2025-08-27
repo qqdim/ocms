@@ -20,11 +20,7 @@ class UserService:
         except ValidationError as e:
             raise ValueError(e)
 
-        user = User.objects.create(
-            username=username,
-            email=email,
-            role=role
-        )
+        user = User.objects.create(username=username, email=email, role=role)
         user.set_password(password)
         user.save()
         logger.info(f"User {user.id} ({username}) created successfully")

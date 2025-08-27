@@ -21,12 +21,7 @@ class SubmissionService:
 
         logger.info(f"Creating submission for assignment {assignment.id} by student {student.id}")
 
-        submission = Submission.objects.create(
-            assignment=assignment,
-            student=student,
-            text=text,
-            attachment=attachment
-        )
+        submission = Submission.objects.create(assignment=assignment, student=student, text=text, attachment=attachment)
 
         logger.info(f"Submission {submission.id} created successfully")
         return submission

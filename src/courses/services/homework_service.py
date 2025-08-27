@@ -9,19 +9,16 @@ logger = logging.getLogger(__name__)
 
 class HomeworkService:
     """Service class for homework assignment operations."""
-    
+
     @staticmethod
     def create_homework_assignment(text: str, lecture: Lecture, created_by, due_date=None) -> HomeworkAssignment:
         """Create a new homework assignment."""
 
         logger.info(f"Creating homework assignment for lecture {lecture.id} by user {created_by.id}")
         assignment = HomeworkAssignment.objects.create(
-            text=text,
-            lecture=lecture,
-            created_by=created_by,
-            due_date=due_date
+            text=text, lecture=lecture, created_by=created_by, due_date=due_date
         )
-        
+
         logger.info(f"Homework assignment {assignment.id} created successfully")
         return assignment
 
@@ -32,7 +29,7 @@ class HomeworkService:
         logger.info(f"Updating homework assignment {assignment.id}")
         for field, value in validated_data.items():
             setattr(assignment, field, value)
-        
+
         assignment.save()
         logger.info(f"Homework assignment {assignment.id} updated successfully")
         return assignment

@@ -19,11 +19,7 @@ class CourseService:
 
         logger.info(f"Creating course '{title}' by user {created_by.id}")
 
-        course = Course.objects.create(
-            title=title,
-            description=description,
-            created_by=created_by
-        )
+        course = Course.objects.create(title=title, description=description, created_by=created_by)
         course.teachers.add(created_by)
         logger.info(f"Course {course.id} created successfully")
         return course

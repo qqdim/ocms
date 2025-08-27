@@ -10,9 +10,7 @@ class CourseQuerySet(models.QuerySet):
 
     def with_relations(self):
         """Prefetch related objects for efficient loading."""
-        return self.select_related('created_by').prefetch_related(
-            'teachers', 'students', 'lectures'
-        )
+        return self.select_related("created_by").prefetch_related("teachers", "students", "lectures")
 
     def for_teacher(self, teacher):
         """Get courses where user is a teacher."""
@@ -36,9 +34,7 @@ class LectureQuerySet(models.QuerySet):
 
     def with_relations(self):
         """Prefetch related objects for efficient loading."""
-        return self.select_related('course', 'created_by').prefetch_related(
-            'assignments', 'assignments__submissions'
-        )
+        return self.select_related("course", "created_by").prefetch_related("assignments", "assignments__submissions")
 
     def for_course(self, course_id: int):
         """Get lectures for specific course."""
@@ -50,7 +46,7 @@ class LectureQuerySet(models.QuerySet):
 
     def with_presentations(self):
         """Get lectures that have presentations."""
-        return self.exclude(presentation='')
+        return self.exclude(presentation="")
 
 
 class SubmissionQuerySet(models.QuerySet):
@@ -59,8 +55,8 @@ class SubmissionQuerySet(models.QuerySet):
     def with_relations(self):
         """Prefetch related objects for efficient loading."""
         return self.select_related(
-            'assignment', 'assignment__lecture', 'assignment__lecture__course', 'student'
-        ).prefetch_related('grade', 'grade__comments')
+            "assignment", "assignment__lecture", "assignment__lecture__course", "student"
+        ).prefetch_related("grade", "grade__comments")
 
     def for_student(self, student):
         """Get submissions by student."""
@@ -88,9 +84,9 @@ class HomeworkAssignmentQuerySet(models.QuerySet):
 
     def with_relations(self):
         """Prefetch related objects for efficient loading."""
-        return self.select_related(
-            'lecture', 'lecture__course', 'created_by'
-        ).prefetch_related('submissions', 'submissions__grade')
+        return self.select_related("lecture", "lecture__course", "created_by").prefetch_related(
+            "submissions", "submissions__grade"
+        )
 
     def for_lecture(self, lecture_id: int):
         """Get assignments for specific lecture."""
@@ -103,6 +99,7 @@ class HomeworkAssignmentQuerySet(models.QuerySet):
     def overdue(self):
         """Get assignments that are overdue."""
         from django.utils import timezone
+
         return self.filter(due_date__lt=timezone.now())
 
 
@@ -112,8 +109,8 @@ class GradeQuerySet(models.QuerySet):
     def with_relations(self):
         """Prefetch related objects for efficient loading."""
         return self.select_related(
-            'submission', 'submission__assignment', 'submission__student', 'graded_by'
-        ).prefetch_related('comments')
+            "submission", "submission__assignment", "submission__student", "graded_by"
+        ).prefetch_related("comments")
 
     def for_student(self, student):
         """Get grades for specific student."""
@@ -137,9 +134,7 @@ class GradeCommentQuerySet(models.QuerySet):
 
     def with_relations(self):
         """Prefetch related objects for efficient loading."""
-        return self.select_related(
-            'grade', 'author', 'grade__submission', 'grade__submission__student'
-        )
+        return self.select_related("grade", "author", "grade__submission", "grade__submission__student")
 
     def for_grade(self, grade_id: int):
         """Get comments for a specific grade."""

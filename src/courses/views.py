@@ -125,7 +125,6 @@ class LectureViewSet(viewsets.ModelViewSet):
         return Lecture.objects.for_course(course_id).with_relations().order_by("-created_at")
 
 
-
 class HomeworkAssignmentViewSet(viewsets.ModelViewSet):
     """ViewSet for managing homework assignments."""
 
@@ -189,8 +188,11 @@ class SubmissionViewSet(viewsets.ModelViewSet):
             if request.method.lower() == "get":
                 if not GradingService.can_user_view_grade(grade_instance, request.user):
                     return response.Response({"detail": "Not allowed."}, status=403)
-                return response.Response(GradeSerializer(grade_instance).data) if grade_instance else response.Response(
-                    status=204)
+                return (
+                    response.Response(GradeSerializer(grade_instance).data)
+                    if grade_instance
+                    else response.Response(status=204)
+                )
 
             serializer_context = {"request": request}
             if request.method.lower() == "post":
@@ -198,8 +200,9 @@ class SubmissionViewSet(viewsets.ModelViewSet):
             elif request.method.lower() == "patch":
                 if not grade_instance:
                     return response.Response({"detail": "No grade exists to update."}, status=400)
-                serializer = GradeSerializer(grade_instance, data=request.data, partial=True,
-                                             context=serializer_context)
+                serializer = GradeSerializer(
+                    grade_instance, data=request.data, partial=True, context=serializer_context
+                )
 
             serializer.is_valid(raise_exception=True)
             grade = serializer.save(submission_id=submission.id)  # Pass submission_id
