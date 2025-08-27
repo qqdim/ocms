@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
-from .services.user_service import UserService
+from users.services.user_service import UserService
 
 User = get_user_model()
 

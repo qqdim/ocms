@@ -2,8 +2,8 @@ from django.shortcuts import get_object_or_404
 from rest_framework import decorators, permissions, response, status, viewsets
 from rest_framework.parsers import FormParser, MultiPartParser
 
-from .models import Course, GradeComment, HomeworkAssignment, Lecture, Submission
-from .permissions import IsCourseStudentOrTeacherReadOnly, IsCourseTeacher, IsTeacher
+from courses.models import Course, GradeComment, HomeworkAssignment, Lecture, Submission
+from courses.permissions import IsCourseStudentOrTeacherReadOnly, IsCourseTeacher, IsTeacher
 from .serializers import (
     CourseSerializer,
     GradeCommentSerializer,
@@ -13,11 +13,11 @@ from .serializers import (
     SubmissionSerializer,
     UserMiniSerializer,
 )
-from .services import (
+from courses.services import (
     CourseService,
     GradingService,
 )
-from .exceptions import (
+from courses.exceptions import (
     CourseException,
     PermissionDeniedException,
     ValidationException,
