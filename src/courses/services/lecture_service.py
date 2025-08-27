@@ -24,17 +24,7 @@ class LectureService:
         
         logger.info(f"Lecture {lecture.id} created successfully")
         return lecture
-    
-    @staticmethod
-    def get_lectures_by_course(course_id: Optional[int] = None) -> QuerySet[Lecture]:
-        """Get lectures, optionally filtered by course."""
 
-        queryset = Lecture.objects.select_related("course").all()
-        if course_id:
-            queryset = queryset.filter(course_id=course_id)
-            
-        return queryset.order_by("-created_at")
-    
     @staticmethod
     def update_lecture(lecture: Lecture, **validated_data) -> Lecture:
         """Update lecture with validated data."""

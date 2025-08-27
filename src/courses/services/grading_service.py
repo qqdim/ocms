@@ -80,19 +80,3 @@ class GradingService:
         logger.info(f"Grade comment {comment.id} created successfully")
         return comment
     
-    @staticmethod
-    def get_grade_comments_for_user(user, grade_id: Optional[int] = None):
-        """Get grade comments visible to the user."""
-
-        from django.db.models import Q
-        
-        queryset = GradeComment.objects.select_related(
-            "grade", "author", "grade__submission__assignment__lecture__course"
-        )
-        
-        if grade_id:
-            queryset = queryset.filter(grade_id=grade_id)
-        return queryset.filter(
-            Q(grade__submission__assignment__lecture__course__teachers=user) |
-            Q(grade__submission__student=user)
-        ).order_by("-created_at")

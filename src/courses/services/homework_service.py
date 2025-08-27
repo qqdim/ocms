@@ -24,17 +24,7 @@ class HomeworkService:
         
         logger.info(f"Homework assignment {assignment.id} created successfully")
         return assignment
-    
-    @staticmethod
-    def get_assignments_by_lecture(lecture_id: Optional[int] = None) -> QuerySet[HomeworkAssignment]:
-        """Get homework assignments, optionally filtered by lecture."""
 
-        queryset = HomeworkAssignment.objects.select_related("lecture", "lecture__course").all()
-        if lecture_id:
-            queryset = queryset.filter(lecture_id=lecture_id)
-            
-        return queryset.order_by("-created_at")
-    
     @staticmethod
     def update_homework_assignment(assignment: HomeworkAssignment, **validated_data) -> HomeworkAssignment:
         """Update homework assignment with validated data."""

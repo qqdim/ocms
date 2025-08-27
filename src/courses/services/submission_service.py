@@ -51,24 +51,6 @@ class SubmissionService:
         return submission
 
     @staticmethod
-    def get_submissions_for_user(user, assignment_id: Optional[int] = None) -> QuerySet[Submission]:
-        """Get submissions visible to the user based on their role."""
-
-        queryset = Submission.objects.select_related("assignment", "assignment__lecture__course").all()
-
-        if assignment_id:
-            queryset = queryset.filter(assignment_id=assignment_id)
-
-        if hasattr(user, "is_student") and user.is_student():
-            queryset = queryset.filter(student=user)
-        elif hasattr(user, "is_teacher") and user.is_teacher():
-            queryset = queryset.filter(assignment__lecture__course__teachers=user)
-        else:
-            queryset = queryset.none()
-
-        return queryset.order_by("-submitted_at")
-
-    @staticmethod
     def can_user_view_submission(submission: Submission, user) -> bool:
         """Check if user can view the submission."""
 

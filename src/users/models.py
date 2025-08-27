@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from .querysets import UserQuerySet
 
 
 class User(AbstractUser):
@@ -11,6 +12,7 @@ class User(AbstractUser):
         STUDENT = "STUDENT", "Student"
 
     role = models.CharField(max_length=7, choices=Roles.choices)
+    objects = UserQuerySet.as_manager()
 
     def is_teacher(self):
         """Check if the user has the teacher role."""

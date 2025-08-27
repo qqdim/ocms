@@ -2,6 +2,15 @@ from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
+from .querysets import (
+    CourseQuerySet,
+    LectureQuerySet,
+    HomeworkAssignmentQuerySet,
+    SubmissionQuerySet,
+    GradeQuerySet,
+    GradeCommentQuerySet,
+)
+
 User = settings.AUTH_USER_MODEL
 
 
@@ -14,6 +23,7 @@ class Course(models.Model):
     teachers = models.ManyToManyField(User, related_name="teaching_courses", blank=True)
     students = models.ManyToManyField(User, related_name="enrolled_courses", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    objects = CourseQuerySet.as_manager()
 
     def __str__(self):
         """Return string representation of the course."""
@@ -28,6 +38,7 @@ class Lecture(models.Model):
     presentation = models.FileField(upload_to="presentations/", blank=True, null=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
+    objects = LectureQuerySet.as_manager()
 
     def __str__(self):
         """Return string representation of the lecture."""
@@ -42,6 +53,7 @@ class HomeworkAssignment(models.Model):
     due_date = models.DateTimeField(blank=True, null=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
+    objects = HomeworkAssignmentQuerySet.as_manager()
 
     def __str__(self):
         """Return string representation of the homework assignment."""
@@ -56,6 +68,7 @@ class Submission(models.Model):
     text = models.TextField(blank=True)
     attachment = models.FileField(upload_to="submissions/", blank=True, null=True)
     submitted_at = models.DateTimeField(auto_now_add=True)
+    objects = SubmissionQuerySet.as_manager()
 
     class Meta:
         unique_together = ("assignment", "student")
@@ -73,6 +86,7 @@ class Grade(models.Model):
     comment = models.TextField(blank=True)
     graded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     graded_at = models.DateTimeField(auto_now=True)
+    objects = GradeQuerySet.as_manager()
 
     def __str__(self):
         """Return string representation of the grade."""
@@ -86,6 +100,7 @@ class GradeComment(models.Model):
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     text = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+    objects = GradeCommentQuerySet.as_manager()
 
     def __str__(self):
         """Return string representation of the grade comment."""
