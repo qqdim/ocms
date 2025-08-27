@@ -1,7 +1,7 @@
 import logging
 from django.db.models import QuerySet, Q
 from typing import Optional
-
+from ..validators import SubmissionValidator
 from ..exceptions import NotEnrolledException, AlreadyGradedException, PermissionDeniedException
 from ..models import Submission, HomeworkAssignment
 
@@ -16,8 +16,7 @@ class SubmissionService:
         """Create a new submission."""
 
         course = assignment.lecture.course
-        if not course.students.filter(id=student.id).exists():
-            raise NotEnrolledException("You are not enrolled in this course.")
+        SubmissionValidator.validate_student_is_enrolled(course, student)
 
         logger.info(f"Creating submission for assignment {assignment.id} by student {student.id}")
 
@@ -30,11 +29,8 @@ class SubmissionService:
     def update_submission(submission: Submission, user, **validated_data) -> Submission:
         """Update submission with validation."""
 
-        if hasattr(submission, "grade"):
-            raise AlreadyGradedException("Submission already graded; cannot modify.")
-
-        if submission.student_id != user.id:
-            raise PermissionDeniedException("Cannot modify others' submissions.")
+        SubmissionValidator.validate_submission_not_graded(submission)
+        SubmissionValidator.validate_user_is_submission_owner(submission, user)
 
         logger.info(f"Updating submission {submission.id}")
 

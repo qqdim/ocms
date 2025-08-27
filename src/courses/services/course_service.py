@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from typing import List, Optional
 
+from ..validators import CourseValidator
 from ..exceptions import UserRoleException, ValidationException
 from ..models import Course
 
@@ -30,11 +31,8 @@ class CourseService:
 
         student = get_object_or_404(User, id=student_id)
 
-        if not student.is_student():
-            raise UserRoleException("User is not a student.")
-
-        if course.students.filter(id=student_id).exists():
-            raise ValidationException("Student is already enrolled in this course.")
+        CourseValidator.validate_user_is_student(student)
+        CourseValidator.validate_student_not_enrolled(course, student)
 
         course.students.add(student)
         logger.info(f"Student {student_id} added to course {course.id}")
@@ -52,11 +50,8 @@ class CourseService:
         """Add a teacher to the course."""
 
         teacher = get_object_or_404(User, id=teacher_id)
-        if not teacher.is_teacher():
-            raise UserRoleException("User is not a teacher.")
-
-        if course.teachers.filter(id=teacher_id).exists():
-            raise ValidationException("Teacher is already assigned to this course.")
+        CourseValidator.validate_user_is_teacher(teacher)
+        CourseValidator.validate_teacher_not_assigned(course, teacher)
 
         course.teachers.add(teacher)
         logger.info(f"Teacher {teacher_id} added to course {course.id}")

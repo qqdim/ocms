@@ -1,6 +1,7 @@
 import logging
 from typing import Optional
 
+from ..validators import GradingValidator
 from ..models import Grade, GradeComment, Submission
 from ..exceptions import PermissionDeniedException, ValidationException
 
@@ -15,11 +16,8 @@ class GradingService:
         """Create a new grade for submission."""
 
         course = submission.assignment.lecture.course
-        if not course.teachers.filter(id=graded_by.id).exists():
-            raise PermissionDeniedException("Only a course teacher can grade this submission.")
-
-        if hasattr(submission, "grade"):
-            raise ValidationException("Grade already exists. Use update instead.")
+        GradingValidator.validate_user_is_course_teacher(course, graded_by)
+        GradingValidator.validate_grade_does_not_exist(submission)
 
         logger.info(f"Creating grade for submission {submission.id} by teacher {graded_by.id}")
 
@@ -32,8 +30,7 @@ class GradingService:
         """Update existing grade."""
 
         course = grade.submission.assignment.lecture.course
-        if not course.teachers.filter(id=user.id).exists():
-            raise PermissionDeniedException("Only a course teacher can update this grade.")
+        GradingValidator.validate_user_is_course_teacher(course, user)
 
         logger.info(f"Updating grade {grade.id}")
 
@@ -61,8 +58,7 @@ class GradingService:
         is_teacher = course.teachers.filter(id=author.id).exists()
         is_student_owner = grade.submission.student_id == author.id
 
-        if not (is_teacher or is_student_owner):
-            raise PermissionDeniedException("Only course teachers or the submission owner can comment.")
+        GradingValidator.validate_user_can_comment(grade, author)
 
         logger.info(f"Creating comment on grade {grade.id} by user {author.id}")
 
