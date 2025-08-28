@@ -19,7 +19,7 @@ class TestSubmissionService:
     def test_create_submission(self, student):
         """Tests that a submission can be created successfully."""
         assignment = HomeworkAssignmentFactory()
-		
+
         assignment.lecture.course.students.add(student)
 
         with patch("courses.services.submission_service.logger") as mock_logger:
@@ -75,7 +75,7 @@ class TestSubmissionService:
 
     def test_get_submissions_for_user(self, teacher, student):
         """Tests that users can only see submissions they are allowed to see."""
-		
+
         submission1 = SubmissionFactory(student=student)
         SubmissionFactory()
 
@@ -83,12 +83,11 @@ class TestSubmissionService:
         assert student_submissions.count() == 1
         assert submission1 in student_submissions
 
-		
         course = CourseFactory(created_by=teacher)
         lecture = LectureFactory(course=course)
         assignment = HomeworkAssignmentFactory(lecture=lecture)
         submission2 = SubmissionFactory(assignment=assignment)
-        SubmissionFactory() 
+        SubmissionFactory()
 
         teacher_submissions = SubmissionService.get_submissions_for_user(teacher)
         assert teacher_submissions.count() == 1

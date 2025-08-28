@@ -39,6 +39,7 @@ class CourseValidator:
         if course.teachers.filter(id=teacher.id).exists():
             raise ValidationException("Teacher is already assigned to this course.")
 
+
 class SubmissionValidator:
     """Contains validation logic related to assignments."""
 

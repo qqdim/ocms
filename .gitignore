@@ -12,7 +12,6 @@ media/
 static_cdn/
 
 .env
-.env.example
 
 .vscode/
 .idea/
